@@ -1,9 +1,9 @@
 {
   "heartbeat": {
-    "total_runs": 2,
+    "total_runs": 3,
     "total_successes": 0,
-    "total_failures": 2,
-    "consecutive_failures": 2,
+    "total_failures": 3,
+    "consecutive_failures": 3,
     "success_rate": 0
   }
 }
