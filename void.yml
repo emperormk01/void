@@ -1,0 +1,77 @@
+# Void configuration
+#
+# Enable skills by setting enabled: true. Multiple skills at the same time run in parallel.
+# Set var: "value" to pass a default parameter to the skill.
+# Set model: "gpt-4o" per skill to override the default model.
+
+skills:
+  # --- Research & Content ---
+  deep-research: { enabled: false, schedule: "workflow_dispatch", var: "" }
+  hacker-news-digest: { enabled: false, schedule: "0 7 * * *" }
+  last30: { enabled: false, schedule: "workflow_dispatch", var: "" }
+  rss-digest: { enabled: false, schedule: "0 7 * * *" }
+
+  # --- Dev & Code ---
+  pr-review: { enabled: false, schedule: "0 9 * * *" }
+  github-monitor: { enabled: false, schedule: "0 9 * * *" }
+  github-trending: { enabled: false, schedule: "0 9 * * *" }
+  vuln-scanner: { enabled: true, schedule: "0 16 * * 6", var: "" }
+  skill-security-scan: { enabled: true, schedule: "0 16 * * 1" }
+
+  # --- Crypto & Markets ---
+  token-alert: { enabled: false, schedule: "0 12 * * *" }
+  token-movers: { enabled: false, schedule: "0 12 * * *" }
+  on-chain-monitor: { enabled: false, schedule: "0 12 * * *" }
+  monitor-polymarket: { enabled: false, schedule: "30 12 * * *" }
+
+  # --- Social & Writing ---
+  write-tweet: { enabled: false, schedule: "0 17 * * *" }
+  fetch-tweets: { enabled: false, schedule: "0 17 * * *" }
+  farcaster-digest: { enabled: false, schedule: "0 17 * * *" }
+
+  # --- Productivity ---
+  security-digest: { enabled: true, schedule: "0 14 * * *" }
+  weekly-shiplog: { enabled: false, schedule: "0 9 * * 1" }
+  reg-monitor: { enabled: false, schedule: "0 14 * * 3" }
+
+  # --- Meta / Agent ---
+  heartbeat: { enabled: false, schedule: "0 8,14,20 * * *" }
+  self-improve: { enabled: false, schedule: "0 18 1/2 * *" }
+  skill-repair: { enabled: false, schedule: "reactive", var: "" }
+  skill-health: { enabled: false, schedule: "0 18 * * *" }
+  skill-evals: { enabled: false, schedule: "0 6 * * 0" }
+  create-skill: { enabled: false, schedule: "workflow_dispatch", var: "" }
+  cost-report: { enabled: false, schedule: "0 7 * * 1" }
+  autoresearch: { enabled: false, schedule: "workflow_dispatch", var: "" }
+
+  # --- Fleet ---
+  spawn-instance: { enabled: false, schedule: "workflow_dispatch", var: "" }
+  fleet-control: { enabled: false, schedule: "0 9,15 * * *" }
+  fork-fleet: { enabled: false, schedule: "0 10 * * 1" }
+
+# Reactive triggers
+reactive:
+  skill-repair:
+    trigger:
+      - { on: "*", when: "consecutive_failures >= 3" }
+
+# Chains
+chains: {}
+
+# Default model for all skills.
+# Options: gpt-4o, gpt-4o-mini, gpt-5.2, claude-opus-4-7, claude-sonnet-4-6, claude-haiku-4-5-20251001
+model: gpt-4o
+
+# AI Gateway
+# provider: openai (uses OPENAI_API_KEY) | anthropic (uses ANTHROPIC_API_KEY) | byok (uses BYOK_API_KEY)
+gateway:
+  provider: openai
+
+# Output channels
+channels:
+  jsonrender:
+    enabled: true
+
+# Messaging integration
+telegram:
+  enabled: true

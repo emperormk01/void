@@ -1,0 +1,277 @@
+{
+  "name": "Void Skills",
+  "description": "Skills for the Void autonomous agent framework",
+  "repo": "emperormk01/void",
+  "skills": [
+    {
+      "name": "Autoresearch",
+      "slug": "autoresearch",
+      "description": "Evolve a skill by generating variations, evaluating them, and updating the best version",
+      "tags": "[meta, dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void autoresearch"
+    },
+    {
+      "name": "cost-report",
+      "slug": "cost-report",
+      "description": "Weekly API cost report \u2014 reads token usage CSV, computes dollar costs per skill and model, reports trends",
+      "tags": "[meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void cost-report"
+    },
+    {
+      "name": "Create Skill",
+      "slug": "create-skill",
+      "description": "Generate a complete new skill from a one-line prompt",
+      "tags": "[dev, meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void create-skill"
+    },
+    {
+      "name": "Deep Research",
+      "slug": "deep-research",
+      "description": "Exhaustive multi-source synthesis on any topic using full-context ingestion \u2014 far beyond a digest",
+      "tags": "[research]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void deep-research"
+    },
+    {
+      "name": "Farcaster Digest",
+      "slug": "farcaster-digest",
+      "description": "Trending and relevant Farcaster casts filtered by crypto, prediction markets, and coordination topics",
+      "tags": "[crypto, social]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void farcaster-digest"
+    },
+    {
+      "name": "Fetch Tweets",
+      "slug": "fetch-tweets",
+      "description": "Search X/Twitter for tweets about a token, keyword, username, or topic",
+      "tags": "[social]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void fetch-tweets"
+    },
+    {
+      "name": "Fleet Control",
+      "slug": "fleet-control",
+      "description": "Monitor managed Void instances \u2014 check health, dispatch skills, aggregate status",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void fleet-control"
+    },
+    {
+      "name": "fork-fleet",
+      "slug": "fork-fleet",
+      "description": "Inventory active Void forks, detect diverged work, surface upstream contribution candidates",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void fork-fleet"
+    },
+    {
+      "name": "GitHub Monitor",
+      "slug": "github-monitor",
+      "description": "Watch repos for stale PRs, new issues, and new releases",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void github-monitor"
+    },
+    {
+      "name": "GitHub Trending",
+      "slug": "github-trending",
+      "description": "Top 10 trending repos on GitHub right now",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void github-trending"
+    },
+    {
+      "name": "Hacker News Digest",
+      "slug": "hacker-news-digest",
+      "description": "Top HN stories filtered by keywords relevant to your interests",
+      "tags": "[research]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void hacker-news-digest"
+    },
+    {
+      "name": "Heartbeat",
+      "slug": "heartbeat",
+      "description": "Proactive ambient check \u2014 surface anything worth attention",
+      "tags": "[meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void heartbeat"
+    },
+    {
+      "name": "Last 30 Days",
+      "slug": "last30",
+      "description": "Cross-platform social research \u2014 what people are actually saying about a topic across Reddit, X, HN, Polymarket, and the web over the last 30 days",
+      "tags": "[research, social]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void last30"
+    },
+    {
+      "name": "Monitor Polymarket",
+      "slug": "monitor-polymarket",
+      "description": "Monitor specific prediction markets for 24h price moves, volume changes, and fresh comments",
+      "tags": "[crypto]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void monitor-polymarket"
+    },
+    {
+      "name": "On-Chain Monitor",
+      "slug": "on-chain-monitor",
+      "description": "Monitor blockchain addresses and contracts for notable activity",
+      "tags": "[crypto]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void on-chain-monitor"
+    },
+    {
+      "name": "PR Review",
+      "slug": "pr-review",
+      "description": "Auto-review open PRs on watched repos and post summary comments",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void pr-review"
+    },
+    {
+      "name": "Regulatory Monitor",
+      "slug": "reg-monitor",
+      "description": "Track legislation, regulatory actions, and legal developments affecting prediction markets, crypto, and AI agents",
+      "tags": "[crypto, research]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void reg-monitor"
+    },
+    {
+      "name": "RSS Digest",
+      "slug": "rss-digest",
+      "description": "Fetch, summarize, and deliver RSS feed highlights",
+      "tags": "[news]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void rss-digest"
+    },
+    {
+      "name": "Security Digest",
+      "slug": "security-digest",
+      "description": "Monitor recent security advisories from the GitHub Advisory Database for tracked ecosystems",
+      "tags": "[news, dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void security-digest"
+    },
+    {
+      "name": "self-improve",
+      "slug": "self-improve",
+      "description": "Improve the agent itself \u2014 better skills, prompts, workflows, and config based on recent performance",
+      "tags": "[meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void self-improve"
+    },
+    {
+      "name": "Skill Evals",
+      "slug": "skill-evals",
+      "description": "Evaluate skill output quality against assertion manifests \u2014 detects regressions before users notice",
+      "tags": "[meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void skill-evals"
+    },
+    {
+      "name": "Skill Health",
+      "slug": "skill-health",
+      "description": "Audit skill quality metrics, detect API degradation, and report health trends",
+      "tags": "[meta]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void skill-health"
+    },
+    {
+      "name": "Skill Repair",
+      "slug": "skill-repair",
+      "description": "Diagnose and fix failing or degraded skills automatically",
+      "tags": "[meta, dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void skill-repair"
+    },
+    {
+      "name": "Skill Security Scan",
+      "slug": "skill-security-scan",
+      "description": "Audit imported skills for shell injection, secret exfiltration, path traversal, and prompt injection before they run",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void skill-security-scan"
+    },
+    {
+      "name": "Spawn Instance",
+      "slug": "spawn-instance",
+      "description": "Clone this Void agent into a new GitHub repo \u2014 fork, configure skills, register in fleet",
+      "tags": "[dev]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void spawn-instance"
+    },
+    {
+      "name": "Token Alert",
+      "slug": "token-alert",
+      "description": "Notify on price or volume anomalies for tracked tokens",
+      "tags": "[crypto]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void token-alert"
+    },
+    {
+      "name": "Token Movers",
+      "slug": "token-movers",
+      "description": "Top movers, losers, and trending coins from CoinGecko",
+      "tags": "[crypto]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void token-movers"
+    },
+    {
+      "name": "Vuln Scanner",
+      "slug": "vuln-scanner",
+      "description": "Fork trending repos, audit for security vulnerabilities, and PR fixes",
+      "tags": "[dev, security]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void vuln-scanner"
+    },
+    {
+      "name": "weekly-shiplog",
+      "slug": "weekly-shiplog",
+      "description": "Weekly narrative of everything shipped \u2014 features, fixes, and momentum, written as a compelling update",
+      "tags": "[content]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void weekly-shiplog"
+    },
+    {
+      "name": "Write Tweet",
+      "slug": "write-tweet",
+      "description": "Generate 10 tweet drafts across 5 size tiers (2 variations each) on a topic from today's outputs",
+      "tags": "[social]",
+      "var": "",
+      "repo": "emperormk01/void",
+      "install": "./add-skill emperormk01/void write-tweet"
+    }
+  ]
+}

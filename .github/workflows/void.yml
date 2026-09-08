@@ -1,0 +1,554 @@
+name: Void
+run-name: "skill: ${{ inputs.skill || 'feature' }}${{ inputs.var && format(' ({0})', inputs.var) || '' }}"
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      skill:
+        description: 'Skill name (must match a directory under skills/)'
+        required: true
+        type: string
+      model:
+        description: 'Model'
+        required: false
+        type: choice
+        default: '(config default)'
+        options:
+          - '(config default)'
+          - gpt-4o
+          - gpt-4o-mini
+          - gpt-5.2
+          - claude-opus-4-7
+          - claude-sonnet-4-6
+          - claude-haiku-4-5-20251001
+          - gemini-3-pro
+          - gemini-3-flash
+          - kimi-k2.5
+          - qwen3-coder
+      var:
+        description: 'Variable (e.g. AI, bitcoin, owner/repo)'
+        required: false
+        type: string
+      chain_context_file:
+        description: 'Path to file with prior chain step outputs (set by chain runner)'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      skill:
+        description: 'Skill to run'
+        required: true
+        type: string
+      model:
+        description: 'Model override'
+        required: false
+        type: string
+      var:
+        description: 'Variable'
+        required: false
+        type: string
+      chain_context_file:
+        description: 'Chain context file path'
+        required: false
+        type: string
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_OPTIONS: '--no-deprecation'
+
+concurrency:
+  group: void-${{ inputs.skill || github.event.action || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    if: github.event_name != 'issues' || github.event.label.name == 'ai-build'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Early checkout
+        if: github.event_name == 'issues'
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
+
+      - name: Determine skill
+        id: skill
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "workflow_call" ]; then
+            echo "name=${{ inputs.skill }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "name=heartbeat" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            echo "name=feature" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check if there's work
+        id: work
+        run: |
+          if [ -n "${{ steps.skill.outputs.name }}" ]; then
+            echo "mode=skill" >> "$GITHUB_OUTPUT"
+            echo "label=${{ steps.skill.outputs.name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing to do"
+          fi
+
+      - name: Checkout repo
+        if: steps.work.outputs.mode != ''
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        if: steps.work.outputs.mode != ''
+        run: |
+          git config user.name "voidframework"
+          git config user.email "voidframework@proton.me"
+
+      - name: Setup Node.js
+        if: steps.work.outputs.mode != ''
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install Bun
+        if: steps.work.outputs.mode != ''
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Run
+        id: run
+        if: steps.work.outputs.mode != ''
+        env:
+          VOID_GATEWAY: ${{ vars.VOID_GATEWAY || 'openai' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          BYOK_API_KEY: ${{ secrets.BYOK_API_KEY }}
+          BYOK_BASE_URL: ${{ secrets.BYOK_BASE_URL }}
+          VOID_MODEL: ${{ inputs.model != '(config default)' && inputs.model || '' }}
+          SKILL_NAME: ${{ steps.skill.outputs.name }}
+          SKILL_VAR: ${{ inputs.var }}
+          GITHUB_TOKEN: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          bun run scripts/runner.ts
+          echo "SKILL_TOTAL_TOKENS=0" >> "$GITHUB_OUTPUT"
+
+      - name: Log token usage
+        if: steps.work.outputs.mode != ''
+        run: |
+          SKILL="${{ steps.skill.outputs.name }}"
+          INPUT="${{ steps.run.outputs.SKILL_INPUT_TOKENS }}"
+          OUTPUT="${{ steps.run.outputs.SKILL_OUTPUT_TOKENS }}"
+          CACHE_READ="${{ steps.run.outputs.SKILL_CACHE_READ_TOKENS }}"
+          CACHE_CREATION="${{ steps.run.outputs.SKILL_CACHE_CREATION_TOKENS }}"
+          TOTAL="${{ steps.run.outputs.SKILL_TOTAL_TOKENS }}"
+          echo "## Token Usage: $SKILL" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Metric | Tokens |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Input | $INPUT |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Output | $OUTPUT |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cache read | $CACHE_READ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Cache creation | $CACHE_CREATION |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Total** | **$TOTAL** |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Track token costs
+        if: steps.work.outputs.mode != '' && steps.run.outcome == 'success'
+        run: |
+          CSV="memory/token-usage.csv"
+          mkdir -p memory
+          if [ ! -f "$CSV" ]; then
+            echo "date,skill,model,input_tokens,output_tokens,cache_read,cache_creation" > "$CSV"
+          fi
+          echo "$(date -u +%Y-%m-%d),${{ steps.skill.outputs.name }},${{ steps.run.outputs.SKILL_MODEL }},${{ steps.run.outputs.SKILL_INPUT_TOKENS }},${{ steps.run.outputs.SKILL_OUTPUT_TOKENS }},${{ steps.run.outputs.SKILL_CACHE_READ_TOKENS }},${{ steps.run.outputs.SKILL_CACHE_CREATION_TOKENS }}" >> "$CSV"
+
+      - name: Capture skill output
+        if: steps.work.outputs.mode != '' && steps.run.outcome == 'success'
+        run: |
+          SKILL="${{ steps.skill.outputs.name }}"
+          mkdir -p .outputs
+          # Save the notification message as a chain artifact
+          PENDING="dashboard/outputs/.pending-${SKILL}.md"
+          if [ -f "$PENDING" ]; then
+            cp "$PENDING" ".outputs/${SKILL}.md"
+          elif [ -f /tmp/skill-result.txt ] && [ -s /tmp/skill-result.txt ]; then
+            cp /tmp/skill-result.txt ".outputs/${SKILL}.md"
+          else
+            echo "_No output captured._" > ".outputs/${SKILL}.md"
+          fi
+          echo "::notice::Skill output captured to .outputs/${SKILL}.md ($(wc -c < ".outputs/${SKILL}.md") bytes)"
+
+      - name: Analyze skill output
+        id: analyze
+        if: steps.work.outputs.mode != '' && steps.run.outcome == 'success'
+        env:
+          BYOK_API_KEY: ${{ secrets.BYOK_API_KEY }}
+        run: |
+          SKILL="${{ steps.skill.outputs.name }}"
+          OUTPUT_FILE=".outputs/${SKILL}.md"
+          [ ! -f "$OUTPUT_FILE" ] && { echo "No output to analyze"; exit 0; }
+          
+          OUTPUT=$(cat "$OUTPUT_FILE" | head -c 5000)
+          
+          RESPONSE=$(curl -s -X POST "https://integrate.api.nvidia.com/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $BYOK_API_KEY" \
+            -d "{\"model\": \"stepfun-ai/step-3.5-flash\", \"messages\": [{\"role\": \"system\", \"content\": \"Score this autonomous agent skill output on a 1-5 scale. Respond with ONLY valid JSON: {\\\"score\\\": number, \\\"reason\\\": string}\"}, {\"role\": \"user\", \"content\": \"$OUTPUT\"}]}")
+          
+          SCORE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content' | grep -oE '[0-5]')
+          REASON=$(echo "$RESPONSE" | jq -r '.choices[0].message.content' | grep -oE '"reason": "[^"]+"' | cut -d'"' -f4)
+          
+          echo "QUALITY_SCORE=$SCORE" >> "$GITHUB_OUTPUT"
+          echo "Analysis: $SCORE/5 - $REASON"
+
+      - name: Convert feed outputs
+        if: steps.work.outputs.mode != '' && vars.JSONRENDER_ENABLED != 'false'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          for pending in dashboard/outputs/.pending-*.md; do
+            [ -f "$pending" ] || continue
+            SKILL=$(basename "$pending" .md | sed 's/^\.pending-//')
+            echo "json-render: converting $SKILL..."
+            ./notify-jsonrender "$SKILL" "$(cat "$pending")" && rm -f "$pending" || echo "json-render: $SKILL conversion failed (non-fatal)"
+          done
+
+      - name: Send pending notifications
+        if: steps.work.outputs.mode != '' && steps.run.outcome == 'success'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          NOTIFY_EMAIL_TO: ${{ secrets.NOTIFY_EMAIL_TO }}
+          NOTIFY_EMAIL_FROM: ${{ vars.NOTIFY_EMAIL_FROM || 'void@notifications.void.bot' }}
+          NOTIFY_EMAIL_SUBJECT_PREFIX: ${{ vars.NOTIFY_EMAIL_SUBJECT_PREFIX || '[Void]' }}
+          SKILL_NAME: ${{ steps.skill.outputs.name }}
+        run: |
+          # Re-deliver any .pending-notify/ messages that failed during sandbox.
+          # Skip messages whose hash was already sent by ./notify inline,
+          # and skip short test/trace probes that shouldn't reach channels.
+          if [ ! -d .pending-notify ] || [ -z "$(ls -A .pending-notify/*.md 2>/dev/null)" ]; then
+            echo "No pending notifications"
+            exit 0
+          fi
+          HASH_FILE=".notify-sent-hashes"
+          touch "$HASH_FILE"
+          for pending in .pending-notify/*.md; do
+            [ -f "$pending" ] || continue
+            MSG=$(cat "$pending")
+
+            # Suppress trivial probes
+            MSG_LEN=${#MSG}
+            if [ "$MSG_LEN" -lt 120 ]; then
+              MSG_LOWER=$(printf '%s' "$MSG" | tr '[:upper:]' '[:lower:]')
+              case "$MSG_LOWER" in
+                *test*|*trace*|*ping*|*debug*|hello|hi)
+                  echo "Skipping pending trace/test message: $MSG"
+                  continue
+                  ;;
+              esac
+            fi
+
+            # Dedup against messages already sent by ./notify inline
+            HASH=$(printf '%s' "$MSG" | sha256sum | awk '{print $1}')
+            if grep -qxF "$HASH" "$HASH_FILE" 2>/dev/null; then
+              echo "Skipping pending duplicate (${HASH:0:8}): $(basename "$pending")"
+              continue
+            fi
+            printf '%s\n' "$HASH" >> "$HASH_FILE"
+
+            echo "Delivering pending notification: $(basename "$pending")"
+            # Telegram
+            if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+              TG_MSG="$MSG"
+              [ ${#TG_MSG} -gt 4000 ] && TG_MSG="${TG_MSG:0:3990}...(truncated)"
+              curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$TG_MSG" '{chat_id: $chat, text: $text}')" > /dev/null 2>&1 || true
+            fi
+            # Discord
+            if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
+              curl -sf -X POST "$DISCORD_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n --arg text "$MSG" '{content: $text}')" > /dev/null 2>&1 || true
+            fi
+            # Slack
+            if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+              curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n --arg text "$MSG" '{text: $text}')" > /dev/null 2>&1 || true
+            fi
+          done
+          rm -rf .pending-notify
+
+      - name: Run post-process scripts
+        if: steps.work.outputs.mode != '' && steps.run.outcome == 'success'
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          NEYNAR_API_KEY: ${{ secrets.NEYNAR_API_KEY }}
+          NEYNAR_SIGNER_UUID: ${{ secrets.NEYNAR_SIGNER_UUID }}
+        run: |
+          # Run all scripts/postprocess-*.sh after Claude finishes.
+          # Each script handles its own .pending-{service}/ directory
+          # and checks its own env vars. Exit 0 if nothing to do.
+          for script in scripts/postprocess-*.sh; do
+            [ -f "$script" ] || continue
+            chmod +x "$script"
+            echo "Running $(basename "$script")..."
+            ./"$script" || echo "::notice::$(basename "$script") failed (non-fatal)"
+          done
+
+      - name: Commit results
+        if: steps.work.outputs.mode != ''
+        run: |
+          git config user.name "voidframework"
+          git config user.email "voidframework@proton.me"
+          rm -f ./notify .notify-sent-hashes  # Remove generated notify script + dedup log before committing
+
+          CURRENT_BRANCH=$(git branch --show-current)
+          LABEL="${{ steps.work.outputs.label }}"
+
+          # If Claude created a feature branch, push it then switch back to main
+          if [ "$CURRENT_BRANCH" != "main" ] && [ -n "$CURRENT_BRANCH" ]; then
+            echo "On feature branch: $CURRENT_BRANCH"
+            git add -A
+            git diff --staged --quiet || git commit -m "chore($LABEL): auto-commit $(date +%Y-%m-%d)"
+            git push --force-with-lease -u origin "$CURRENT_BRANCH" || true
+
+            # Switch back to main and cherry-pick memory/log changes if any
+            git checkout main
+            git pull --rebase origin main || true
+          fi
+
+          # Commit any remaining changes on main
+          git add -A
+          if git diff --staged --quiet; then
+            # Nothing new to commit — but Claude may have committed during its run.
+            # Check for unpushed commits and push them if any exist.
+            if [ "$(git rev-list origin/main..HEAD --count 2>/dev/null)" = "0" ]; then
+              echo "No changes to commit or push"
+              exit 0
+            fi
+            echo "No new changes, but found unpushed commits — pushing"
+          else
+            git commit -m "chore($LABEL): auto-commit $(date +%Y-%m-%d)"
+          fi
+          for i in 1 2 3 4 5; do
+            # Pull and rebase onto latest remote
+            if ! git pull --rebase origin main 2>/dev/null; then
+              echo "Rebase conflict on attempt $i, auto-resolving..."
+              while true; do
+                CONFLICTED=$(git diff --name-only --diff-filter=U) || true
+                [ -z "$CONFLICTED" ] && break
+                for f in $CONFLICTED; do
+                  if [[ "$f" == memory/logs/* ]] || [[ "$f" == memory/topics/* ]] || [[ "$f" == memory/MEMORY.md ]] || [[ "$f" == memory/skill-health/* ]] || [[ "$f" == dashboard/outputs/* ]] || [[ "$f" == .outputs/* ]]; then
+                    sed -i '/^<<<<<<< /d; /^=======/d; /^>>>>>>> /d' "$f"
+                    git add "$f"
+                  else
+                    git checkout --theirs "$f"
+                    git add "$f"
+                  fi
+                done
+                if git diff --cached --quiet; then
+                  git rebase --skip || true
+                else
+                  GIT_EDITOR=true git rebase --continue || true
+                fi
+              done
+            fi
+            # Try to push — if it fails, another job beat us, loop and re-pull
+            if git push -u origin HEAD 2>/dev/null; then
+              echo "Pushed successfully on attempt $i"
+              exit 0
+            fi
+            echo "Push attempt $i failed (ref moved), retrying in ${i}s..."
+            sleep "$i"
+          done
+          echo "Failed to push after 5 attempts"
+          exit 1
+
+      - name: Update cron state
+        if: always() && steps.skill.outputs.name != ''
+        run: |
+          SKILL="${{ steps.skill.outputs.name }}"
+          RUN_OUTCOME="${{ steps.run.outcome }}"
+          NOW_ISO=$(date -u +%FT%TZ)
+          STATE_FILE="memory/cron-state.json"
+          QUALITY_SCORE="${{ steps.analyze.outputs.QUALITY_SCORE }}"
+
+          # Determine status from step outcome
+          if [ "$RUN_OUTCOME" = "success" ]; then
+            CRON_STATUS="success"
+          else
+            CRON_STATUS="failed"
+          fi
+
+          # Read current state
+          if [ -f "$STATE_FILE" ] && jq empty "$STATE_FILE" 2>/dev/null; then
+            STATE=$(cat "$STATE_FILE")
+          else
+            STATE='{}'
+          fi
+
+          # Ensure we're on main with latest
+          git checkout main 2>/dev/null || true
+          git pull --rebase origin main 2>/dev/null || true
+
+          # Read current counters from state
+          PREV_RUNS=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_runs // 0')
+          PREV_SUCC=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_successes // 0')
+          PREV_FAIL=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_failures // 0')
+
+          NEW_RUNS=$((PREV_RUNS + 1))
+          if [ "$CRON_STATUS" = "success" ]; then
+            NEW_SUCC=$((PREV_SUCC + 1))
+            NEW_FAIL=$PREV_FAIL
+            NEW_CONSEC=0
+          else
+            NEW_SUCC=$PREV_SUCC
+            NEW_FAIL=$((PREV_FAIL + 1))
+            PREV_CONSEC=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].consecutive_failures // 0')
+            NEW_CONSEC=$((PREV_CONSEC + 1))
+          fi
+
+          RATE=$(jq -n "if $NEW_RUNS > 0 then ($NEW_SUCC / $NEW_RUNS * 100 | round) / 100 else 0 end")
+
+          STATE=$(echo "$STATE" | jq --arg s "$SKILL" \
+            --argjson runs "$NEW_RUNS" --argjson succ "$NEW_SUCC" --argjson fail "$NEW_FAIL" \
+            --argjson consec "$NEW_CONSEC" --argjson rate "$RATE" '
+            .[$s].total_runs = $runs |
+            .[$s].total_successes = $succ |
+            .[$s].total_failures = $fail |
+            .[$s].consecutive_failures = $consec |
+            .[$s].success_rate = $rate
+          ')
+
+          # Record error signature on failure
+          if [ "$CRON_STATUS" = "failed" ] && [ -f /tmp/skill-error.txt ]; then
+            ERROR_SIG=$(cat /tmp/skill-error.txt)
+            STATE=$(echo "$STATE" | jq --arg s "$SKILL" --arg err "$ERROR_SIG" \
+              '.[$s].last_error = $err')
+          fi
+
+          # Record quality score on success (from analysis step)
+          if [ -n "$QUALITY_SCORE" ] && [ "$QUALITY_SCORE" != "0" ]; then
+            STATE=$(echo "$STATE" | jq --arg s "$SKILL" --argjson q "$QUALITY_SCORE" \
+              '.[$s].last_quality_score = $q')
+          fi
+
+          mkdir -p memory
+          echo "$STATE" | jq '.' > "$STATE_FILE"
+
+          git add "$STATE_FILE"
+          if git diff --staged --quiet; then
+            echo "No state changes"
+            exit 0
+          fi
+
+          git commit -m "chore(cron): $SKILL $CRON_STATUS"
+          for i in 1 2 3 4 5; do
+            if git pull --rebase origin main 2>/dev/null && git push -u origin HEAD 2>/dev/null; then
+              echo "Cron state updated: $SKILL=$CRON_STATUS"
+              exit 0
+            fi
+            # On conflict, take theirs and re-apply our update
+            git rebase --abort 2>/dev/null || true
+            git reset --soft HEAD~1 2>/dev/null || true
+            git checkout -- "$STATE_FILE" 2>/dev/null || true
+            git pull origin main 2>/dev/null || true
+
+            if [ -f "$STATE_FILE" ] && jq empty "$STATE_FILE" 2>/dev/null; then
+              STATE=$(cat "$STATE_FILE")
+            else
+              STATE='{}'
+            fi
+            # Ensure we're on main with latest
+            git checkout main 2>/dev/null || true
+            git pull --rebase origin main 2>/dev/null || true
+
+            # Read current state
+            if [ -f "$STATE_FILE" ] && jq empty "$STATE_FILE" 2>/dev/null; then
+              STATE=$(cat "$STATE_FILE")
+            else
+              STATE='{}'
+            fi
+
+            # Apply quality metrics update
+            apply_state_update() {
+              # Core status update
+              STATE=$(echo "$STATE" | jq --arg s "$SKILL" --arg st "$CRON_STATUS" --arg ts "$NOW_ISO" \
+                '.[$s].last_status = $st | .[$s]["last_" + $st] = $ts')
+
+              # Read current counters from state
+              PREV_RUNS=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_runs // 0')
+              PREV_SUCC=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_successes // 0')
+              PREV_FAIL=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].total_failures // 0')
+
+              NEW_RUNS=$((PREV_RUNS + 1))
+              if [ "$CRON_STATUS" = "success" ]; then
+                NEW_SUCC=$((PREV_SUCC + 1))
+                NEW_FAIL=$PREV_FAIL
+                NEW_CONSEC=0
+              else
+                NEW_SUCC=$PREV_SUCC
+                NEW_FAIL=$((PREV_FAIL + 1))
+                PREV_CONSEC=$(echo "$STATE" | jq --arg s "$SKILL" '.[$s].consecutive_failures // 0')
+                NEW_CONSEC=$((PREV_CONSEC + 1))
+              fi
+
+              RATE=$(jq -n "if $NEW_RUNS > 0 then ($NEW_SUCC / $NEW_RUNS * 100 | round) / 100 else 0 end")
+
+              STATE=$(echo "$STATE" | jq --arg s "$SKILL" \
+                --argjson runs "$NEW_RUNS" --argjson succ "$NEW_SUCC" --argjson fail "$NEW_FAIL" \
+                --argjson consec "$NEW_CONSEC" --argjson rate "$RATE" '
+                .[$s].total_runs = $runs |
+                .[$s].total_successes = $succ |
+                .[$s].total_failures = $fail |
+                .[$s].consecutive_failures = $consec |
+                .[$s].success_rate = $rate
+              ')
+
+              # Record error signature on failure
+              if [ "$CRON_STATUS" = "failed" ] && [ -f /tmp/skill-error.txt ]; then
+                ERROR_SIG=$(cat /tmp/skill-error.txt)
+                STATE=$(echo "$STATE" | jq --arg s "$SKILL" --arg err "$ERROR_SIG" \
+                  '.[$s].last_error = $err')
+              fi
+
+              # Record quality score on success (from analysis step)
+              if [ -n "$QUALITY_SCORE" ] && [ "$QUALITY_SCORE" != "0" ]; then
+                STATE=$(echo "$STATE" | jq --arg s "$SKILL" --argjson q "$QUALITY_SCORE" \
+                  '.[$s].last_quality_score = $q')
+              fi
+            }
+
+            apply_state_update
+            echo "$STATE" | jq '.' > "$STATE_FILE"
+            git add "$STATE_FILE"
+            git diff --staged --quiet && { echo "State already up to date"; exit 0; }
+            git commit -m "chore(cron): $SKILL $CRON_STATUS"
+            sleep "$i"
+          done
+          echo "::warning::Failed to commit cron state (non-fatal)"
