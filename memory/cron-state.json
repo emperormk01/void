@@ -5,5 +5,9 @@
     "total_failures": 8,
     "consecutive_failures": 8,
     "success_rate": 0
+  },
+  "security-digest": {
+    "last_dispatch": "2026-09-08T14:19:15Z",
+    "last_status": "dispatched"
   }
 }
