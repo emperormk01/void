@@ -7,7 +7,10 @@
     "success_rate": 0
   },
   "security-digest": {
-    "last_dispatch": "2026-09-08T14:19:15Z",
-    "last_status": "dispatched"
+    "total_runs": 1,
+    "total_successes": 0,
+    "total_failures": 1,
+    "consecutive_failures": 1,
+    "success_rate": 0
   }
 }
