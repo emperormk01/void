@@ -14,12 +14,10 @@
     "success_rate": 0
   },
   "skill-repair": {
-    "total_runs": 19,
+    "total_runs": 20,
     "total_successes": 0,
-    "total_failures": 19,
-    "consecutive_failures": 19,
-    "success_rate": 0,
-    "last_dispatch": "2026-09-08T20:03:08Z",
-    "last_status": "dispatched"
+    "total_failures": 20,
+    "consecutive_failures": 20,
+    "success_rate": 0
   }
 }
