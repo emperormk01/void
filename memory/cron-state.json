@@ -18,6 +18,8 @@
     "total_successes": 0,
     "total_failures": 65,
     "consecutive_failures": 65,
-    "success_rate": 0
+    "success_rate": 0,
+    "last_dispatch": "2026-09-09T07:49:29Z",
+    "last_status": "dispatched"
   }
 }
