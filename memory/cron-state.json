@@ -1,9 +1,9 @@
 {
   "heartbeat": {
-    "total_runs": 39,
+    "total_runs": 40,
     "total_successes": 0,
-    "total_failures": 39,
-    "consecutive_failures": 39,
+    "total_failures": 40,
+    "consecutive_failures": 40,
     "success_rate": 0
   },
   "security-digest": {
@@ -18,8 +18,6 @@
     "total_successes": 0,
     "total_failures": 61,
     "consecutive_failures": 61,
-    "success_rate": 0,
-    "last_dispatch": "2026-09-09T06:42:34Z",
-    "last_status": "dispatched"
+    "success_rate": 0
   }
 }
